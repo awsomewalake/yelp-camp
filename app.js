@@ -1,13 +1,14 @@
 const express = require("express")
 const path = require('path')
 const mongoose = require('mongoose');
+var morgan = require('morgan');
 var methodOverride = require('method-override')
 const ejsMate = require('ejs-mate')
 const Campground = require('./models/campground');
 mongoose.connect('mongodb://localhost:27017/yelp-camp', {
     useNewUrlParser: true
 })
-
+morgan('tiny')
 const db = mongoose.connection;
 db.on('eroor', console.error.bind(console, 'connecion error:'));
 db.once('open', () => {
@@ -45,7 +46,18 @@ app.get('/campgrounds/:id/edit', async(req, res) => {
 })
 app.get('/campgrounds/:id', async(req, res) => {
     const { id } = req.params
-    const camp = await Campground.findById(id);
+    if (id.match(/^[0-9a-fA-F]{24}$/)) {
+        const camp = await Campground.findById(id);
+        res.render('campground/show.ejs', { camp })
+            // Yes, it's a valid ObjectId, proceed with `findById` call.
+    }
+
+})
+
+app.put('/campgrounds/:id', async(req, res) => {
+    const { id } = req.params
+        // const camp = await Campground.findById(id);
+    const camp = await Campground.findByIdAndUpdate(id, req.body.campground, { new: true });
     res.render('campground/show.ejs', { camp })
 })
 app.post('/campgrounds', async(req, res) => {
@@ -53,7 +65,6 @@ app.post('/campgrounds', async(req, res) => {
     await campground.save();
     res.redirect(`/campgrounds/${campground._id}`)
 })
-
 app.delete('/campgrounds/:id', async(req, res) => {
     const { id } = req.params;
     await Campground.findByIdAndDelete(id);
